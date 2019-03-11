@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const AWS = require('aws-sdk');
+const AWS = require("aws-sdk");
 const S3 = new AWS.S3({
-  signatureVersion: 'v4',
+  signatureVersion: "v4"
 });
-const Sharp = require('sharp');
+const Sharp = require("sharp");
 
 const BUCKET = process.env.BUCKET;
 const URL = process.env.URL;
@@ -12,7 +12,7 @@ const ALLOWED_DIMENSIONS = new Set();
 
 if (process.env.ALLOWED_DIMENSIONS) {
   const dimensions = process.env.ALLOWED_DIMENSIONS.split(/\s*,\s*/);
-  dimensions.forEach((dimension) => ALLOWED_DIMENSIONS.add(dimension));
+  dimensions.forEach(dimension => ALLOWED_DIMENSIONS.add(dimension));
 }
 
 exports.handler = function(event, context, callback) {
@@ -23,33 +23,38 @@ exports.handler = function(event, context, callback) {
   const height = parseInt(match[3], 10);
   const originalKey = match[4];
 
-  if(ALLOWED_DIMENSIONS.size > 0 && !ALLOWED_DIMENSIONS.has(dimensions)) {
-     callback(null, {
-      statusCode: '403',
+  if (ALLOWED_DIMENSIONS.size > 0 && !ALLOWED_DIMENSIONS.has(dimensions)) {
+    callback(null, {
+      statusCode: "403",
       headers: {},
-      body: '',
+      body: ""
     });
     return;
   }
 
-  S3.getObject({Bucket: BUCKET, Key: originalKey}).promise()
-    .then(data => Sharp(data.Body)
-      .resize(width, height)
-      .toFormat('png')
-      .toBuffer()
+  S3.getObject({ Bucket: BUCKET, Key: originalKey })
+    .promise()
+    .then(data =>
+      Sharp(data.Body)
+        .resize(width, height)
+        .fit("inside")
+        .toFormat("png")
+        .toBuffer()
     )
-    .then(buffer => S3.putObject({
+    .then(buffer =>
+      S3.putObject({
         Body: buffer,
         Bucket: BUCKET,
-        ContentType: 'image/png',
-        Key: key,
+        ContentType: "image/png",
+        Key: key
       }).promise()
     )
-    .then(() => callback(null, {
-        statusCode: '301',
-        headers: {'location': `${URL}/${key}`},
-        body: '',
+    .then(() =>
+      callback(null, {
+        statusCode: "301",
+        headers: { location: `${URL}/${key}` },
+        body: ""
       })
     )
-    .catch(err => callback(err))
-}
+    .catch(err => callback(err));
+};
